@@ -17,7 +17,7 @@ env.config();
     }),
   ],
   providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  exports: [AuthService, JwtModule],
   controllers: [ AuthController ],
 })
 export class AuthModule {}

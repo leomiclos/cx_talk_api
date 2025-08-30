@@ -1,26 +1,41 @@
 import { Injectable } from '@nestjs/common';
-import { CreateChatDto } from './dto/create-chat.dto';
-import { UpdateChatDto } from './dto/update-chat.dto';
+import { Message } from './entities/message.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class ChatService {
-  create(createChatDto: CreateChatDto) {
-    return 'This action adds a new chat';
+  constructor(
+    @InjectRepository(Message)
+    private messagesRepository: Repository<Message>,
+  ) { }
+  
+  async create(user: { id: string }, content: string): Promise<Message> {
+    const message = this.messagesRepository.create({
+      userId: user.id, 
+      content,
+      createdAt: new Date(),
+    });
+    const savedMessage = await this.messagesRepository.save(message);
+    
+    // Carrega a mensagem com a relação do usuário
+    const messageWithUser = await this.messagesRepository.findOne({
+      where: { id: savedMessage.id },
+      relations: ['user'],
+    });
+    
+    if (!messageWithUser) {
+      throw new Error('Erro ao carregar mensagem com usuário');
+    }
+    
+    return messageWithUser;
   }
 
-  findAll() {
-    return `This action returns all chat`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} chat`;
-  }
-
-  update(id: number, updateChatDto: UpdateChatDto) {
-    return `This action updates a #${id} chat`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} chat`;
+  async findLast(limit = 50): Promise<Message[]> {
+    return this.messagesRepository.find({
+      relations: ['user'],
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
   }
 }
