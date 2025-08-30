@@ -6,6 +6,7 @@ import { User } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
+  
 
 
   constructor(
@@ -29,6 +30,10 @@ export class UsersService {
 
   findAll() {
     return this.usersRepository.find();
+  }
+
+  findMe(id) {
+    return this.usersRepository.findOne({ where: { id: id } });
   }
 
 }
