@@ -1,25 +1,26 @@
+// app.module.ts
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { ChatModule } from './chat/chat.module';
-import { TypeOrmModule  } from '@nestjs/typeorm';
 import { User } from './users/entities/user.entity';
-import { Chat } from './chat/entities/chat.entity';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 @Module({
   imports: [
-    UsersModule, 
-    ChatModule, 
+    UsersModule,
     AuthModule,
+    ChatModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
-      entities: [User, Chat],
-      synchronize: true,
+      url: process.env.DATABASE_URL,
+      entities: [User, __dirname + '/../**/*.entity{.ts,.js}'],
+      synchronize: true, 
+      ssl: { rejectUnauthorized: false }, // necessário no Neon
     }),
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}
