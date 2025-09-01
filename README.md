@@ -98,8 +98,8 @@ npm run test:cov
 ```http
 POST /auth/login
 POST /auth/register
-GET  /users
-GET  /users/:id
+GET  /users/me
+GET /users/all
 ```
 
 ---
