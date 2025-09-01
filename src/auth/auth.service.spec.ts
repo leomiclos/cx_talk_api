@@ -1,7 +1,14 @@
+// auth/auth.service.spec.ts
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
+
+jest.mock('bcrypt', () => ({
+  hash: jest.fn((pass: string) => Promise.resolve(`hashed-${pass}`)),
+  compare: jest.fn((pass: string, hashed: string) => Promise.resolve(hashed === `hashed-${pass}`)),
+}));
+
 import * as bcrypt from 'bcrypt';
 
 describe('AuthService', () => {
@@ -37,11 +44,9 @@ describe('AuthService', () => {
   describe('register', () => {
     it('should create a new user with hashed password', async () => {
       const dto = { id: '1', name: 'John', email: 'john@test.com', password: '123456' };
-      const hashedPassword = await bcrypt.hash(dto.password, 10);
-
       (usersService.create as jest.Mock).mockResolvedValue({
         ...dto,
-        password: hashedPassword,
+        password: `hashed-${dto.password}`,
       });
 
       const result = await service.register(dto);
@@ -60,12 +65,10 @@ describe('AuthService', () => {
   describe('login', () => {
     it('should return token if credentials are valid', async () => {
       const dto = { email: 'john@test.com', password: '123456' };
-      const hashedPassword = await bcrypt.hash(dto.password, 10);
-
       (usersService.findByEmail as jest.Mock).mockResolvedValue({
         id: '1',
         email: dto.email,
-        password: hashedPassword,
+        password: `hashed-${dto.password}`,
       });
 
       const result = await service.login(dto);
@@ -76,20 +79,15 @@ describe('AuthService', () => {
 
     it('should throw if user does not exist', async () => {
       (usersService.findByEmail as jest.Mock).mockResolvedValue(null);
-
-      await expect(
-        service.login({ email: 'invalid@test.com', password: '123456' }),
-      ).rejects.toThrow();
+      await expect(service.login({ email: 'invalid@test.com', password: '123456' })).rejects.toThrow();
     });
 
     it('should throw if password is incorrect', async () => {
       const dto = { email: 'john@test.com', password: 'wrongpass' };
-      const hashedPassword = await bcrypt.hash('123456', 10);
-
       (usersService.findByEmail as jest.Mock).mockResolvedValue({
         id: '1',
         email: dto.email,
-        password: hashedPassword,
+        password: `hashed-123456`,
       });
 
       await expect(service.login(dto)).rejects.toThrow();
