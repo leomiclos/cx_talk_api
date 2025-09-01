@@ -30,7 +30,7 @@ describe('ChatGateway', () => {
       handshake: { headers: { authorization: 'Bearer token' } },
       data: {},
       emit: jest.fn(),
-      disconnect: jest.fn(), // 👈 mock do disconnect
+      disconnect: jest.fn(), 
     };
 
     await gateway.handleConnection(client);
