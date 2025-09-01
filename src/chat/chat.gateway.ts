@@ -1,17 +1,18 @@
-import { WebSocketGateway, WebSocketServer, SubscribeMessage, OnGatewayConnection, } from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer, SubscribeMessage, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { ChatService } from './chat.service';
 import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException } from '@nestjs/common';
-import { log } from 'console';
+import { UsersService } from '../users/users.service';
 
 @WebSocketGateway({ cors: true })
-export class ChatGateway implements OnGatewayConnection {
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
 
   constructor(
     private chatService: ChatService,
     private jwtService: JwtService,
+    private usersService: UsersService,
   ) { }
 
   async handleConnection(client: any) {
@@ -25,13 +26,50 @@ export class ChatGateway implements OnGatewayConnection {
       const payload = this.jwtService.verify(token);
 
       client.data.userId = payload.sub;
+      
+      
+      
+      const user = await this.usersService.findMe(payload.sub);
+    
+      if (user) {
+        client.data.userName = user.name;
+        client.data.userEmail = user.email;
+      }
+      
       const lastMessages = await this.chatService.findLast();
       client.emit('history', lastMessages.reverse());
-      console.log('Conexão WebSocket autorizada para usuário:', payload.sub);
+      
+      
+      this.server.emit('user:joined', {
+        userId: payload.sub,
+        userName: user?.name || 'Usuário',
+        userEmail: user?.email || '',
+        timestamp: new Date(),
+      });
+      
+      
     } catch (err) {
       client.disconnect();
     }
 
+  }
+
+  async handleDisconnect(client: any) {
+    try {
+      
+      if (client.data.userId) {
+        this.server.emit('user:left', {
+          userId: client.data.userId,
+          userName: client.data.userName || 'Usuário',
+          userEmail: client.data.userEmail || '',
+          timestamp: new Date(),
+        });
+        
+        
+      }
+    } catch (error) {
+      console.error('Erro ao processar desconexão:', error);
+    }
   }
 
   @SubscribeMessage('message')
